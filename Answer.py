@@ -195,7 +195,7 @@ class ConvolutionLayer:
         batch_size, in_channel, _, _ = x.shape
         conv = self.convolution(x, self.W, self.b, self.stride, self.pad)
         self.output_shape = conv.shape
-        return conv
+        return conv 
 
     def convolution(self, x, kernel, bias=None, stride=1, pad=0):
         """
@@ -226,7 +226,7 @@ class ConvolutionLayer:
 
         [Output]
         conv_out : convolution result
-        - Shape : (Conv_Height, Conv_Width)
+        - Shape : (Batch size, Out Channel, Conv_Height, Conv_Width)
         - Conv_Height & Conv_Width can be calculated using 'Height', 'Width', 'Kernel size', 'Stride'
         """
         batch_size, in_channel, _, _ = x.shape
