@@ -34,16 +34,20 @@ CNN = CNN_Classifier()
 # 아래 예시를 참고하여 과제에 주어진 대로 (혹은 과제와 별개로 원하는 대로) Layer를 추가하세요.
 
 # Convolution Layer
-CNN.add_layer('Conv Example Layer', ConvolutionLayer(in_channels=in_channnel, out_channels=16, kernel_size=5, pad=1))
+CNN.add_layer('Conv-1 Layer', ConvolutionLayer(in_channels=in_channnel, out_channels=8, kernel_size=3, pad=1))
 
 # ReLU Layer
-CNN.add_layer('ReLU Example Layer', ReLU())
+CNN.add_layer('ReLU-1 Layer', ReLU())
+
+CNN.add_layer('Conv-2 Layer', ConvolutionLayer(in_channels=8, out_channels=8, kernel_size=3, pad=1))
+CNN.add_layer('ReLU-2 Layer', ReLU())
 
 # Max-pool Layer
-CNN.add_layer('Max-Pool Example Layer', MaxPoolingLayer(kernel_size=3, stride=3))
+CNN.add_layer('Max-Pool Layer', MaxPoolingLayer(kernel_size=2, stride=2))
 
 # FC Layer
-CNN.add_layer('FC Example Layer', FCLayer(input_dim=1234, output_dim=123))
+CNN.add_layer('FC-1 Layer', FCLayer(input_dim=1568, output_dim=500))
+CNN.add_layer('FC-2 Layer', FCLayer(input_dim=500, output_dim=5))
 
 # Softmax Layer
 # 이 layer는 항상 마지막에 추가
@@ -53,9 +57,9 @@ CNN.add_layer('Softmax Layer', SoftmaxLayer())
 CNN.summary()
 
 # Hyper-parameters
-num_epochs = None
-learning_rate = None
-print_every = None
+num_epochs = 37
+learning_rate = 0.0007
+print_every = 1
 
 # =========================================================================
 
@@ -135,15 +139,12 @@ print('Best acc : %.2f at epoch %d' % (best_acc, best_epoch))
 #   train_acc-epoch, test_acc-epoch의 그래프를 한 plot에 같이 그리세요         #
 #                                                                         #
 ###########################################################################
-
-
-
-
-
-
-
-
-
-
+x_axis = list(range(len(test_acc)))
+plt.plot(x_axis, train_acc, 'b-', label='Train Acc.')
+plt.plot(x_axis, test_acc, 'r-', label='Test Acc.')
+plt.title('Train & Test Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
 # =========================================================================
 plt.show()

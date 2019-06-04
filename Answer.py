@@ -113,12 +113,6 @@ class ReLU:
                 dz[i]=tmp[i]
         
         dz=np.reshape(dz,d_prev.shape)
-        
-        print("Relu d_prev")
-        print(d_prev)
-        print("Relu dz")
-        print(dz)
-        
         # =========================================================================
         return dz
 
@@ -275,44 +269,21 @@ class ConvolutionLayer:
         self.db = np.zeros_like(self.b, dtype=np.float64)
         dx = np.zeros_like(self.x, dtype=np.float64)
         # =============================== EDIT HERE ===============================
-
         # dW
-        '''
         for i in range(batch_size):
             for j in range(out_channel):
                 for k in range(in_channel):
                     self.dW[j][k]+=convolution2d(self.x[i][k], d_prev[i][j], self.stride)
-        '''
-        conv_h=self.output_shape[2]
-        conv_w=self.output_shape[3]
-
-        for i in range(batch_size):
-            for j in range(out_channel):
-                for k in range(in_channel):
-                    for a in range(conv_h):
-                        for b in range(conv_w):
-                            for c in range(kernel_size):
-                                for d in range(kernel_size):
-                                    self.dW[j][k][c][d]+=d_prev[i][j][a][b]*self.x[i][k][c][d]
-        print("convolution dW")
-        print(self.dW)
 
         # db
         for i in range(batch_size):
             for j in range(out_channel):
                 self.db[j]+=np.sum(d_prev[i][j])
-        print("convolution db")
-        print(self.db)
+
         # dx
         reverse_W=np.transpose(np.flip(self.W, (2, 3)),(1,0,2,3))
-        tmp_dprev=self.zero_pad(d_prev, kernel_size-1)
-        '''
-        for i in range(batch_size):
-            for j in range(out_channel):
-                for k in range(in_channel):
-                    dx[i][k]+=convolution2d(tmp_dprev[i][j], reverse_W[j][k], self.stride)
-        '''
         dx=self.convolution(d_prev, reverse_W, self.b, self.stride, kernel_size-1)
+        dx=dx[:,:,kernel_size-1:height+kernel_size,kernel_size-1:width+kernel_size]
         # =========================================================================
         return dx
 
@@ -447,8 +418,6 @@ class MaxPoolingLayer:
         d_max=np.zeros((batch, channel, height*self.kernel_size, width*self.kernel_size))
         x_h=d_max.shape[2]
         x_w=d_max.shape[3]
-        print("self.mask")
-        print(self.mask)
 
         for i in range(batch):
             for j in range(channel):
@@ -530,9 +499,9 @@ class FCLayer:
         dx = np.zeros_like(self.x, dtype=np.float64)        # Gradient w.r.t. input x
         # =============================== EDIT HERE ===============================
         self.dW=np.matmul(np.transpose(self.x), d_prev)
-        self.db=np.ones((self.b.shape[0],1), dtype=np.float32)
-        self.db=np.matmul(np.transpose(self.db), d_prev)
-        self.db=self.db.reshape(-1)
+        for i in range(d_prev.shape[0]):
+            for j in range(d_prev.shape[1]):
+                self.db[j]+=np.sum(d_prev[i][j])
         dx=np.matmul(d_prev, self.W.T)
         # =========================================================================
         return dx
