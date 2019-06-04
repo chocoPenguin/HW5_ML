@@ -36,19 +36,15 @@ def convolution2d(x, kernel, stride):
     kernel_size = kernel.shape[0]
     conv_out = None
     # =============================== EDIT HERE ===============================
-    print(x.shape)
-    print(kernel.shape)
-    print(stride)
-    kernel_size=kernel.shape[0]
-    conv_Height=(int)((x.shape[0]-kernel_size)/stride)
-    conv_Width=(int)((x.shape[1]-kernel_size)/stride)
-    conv_out=np.zeros((conv_Height+1, conv_Width+1))
+    conv_Height=(int)((height-kernel_size)/stride+1)
+    conv_Width=(int)((width-kernel_size)/stride+1)
+    conv_out=np.zeros((conv_Height, conv_Width))
 
     for i in range(conv_Height):
         for j in range(conv_Width):
             for k in range(kernel_size):
                 for t in range(kernel_size):
-                    conv_out[i][j]+=x[i+k][j+t]*kernel[k][t]
+                    conv_out[i][j]+=x[i*stride+k][j*stride+t]*kernel[k][t]
     # =========================================================================
     return conv_out
 
@@ -81,24 +77,21 @@ class ReLU:
         """
         out = None
         # =============================== EDIT HERE ===============================
-        out=np.zeros_like(z)
-        self.zero_mask=np.zeros_like(z)
-        if len(z.shape)==1:
-            for i in range(out.shape[0]):
-                if z[i]<0:
-                    out[i]=0
-                    self.zero_mask[i]=1
-                else:
-                    out[i]=z[i]
+        print("Relu input")
+        print(z)
+        
+        tmp=np.ravel(z)
+        self.zero_mask=np.ones_like(tmp)
+        out=np.ones_like(tmp)
 
-        elif len(z.shape)==2:
-            for i in range(out.shape[0]):
-                for j in range(out.shape[1]):
-                    if z[i][j]<0:
-                        out[i][j]=0
-                        self.zero_mask[i][j]=1
-                    else:
-                        out[i][j]=z[i][j]
+        for i in range(tmp.size):
+            if tmp[i]>0:
+                self.zero_mask[i]=0
+                out[i]=tmp[i]
+        out=np.reshape(out,z.shape)
+
+        print("Relu output")
+        print(out)
         # =========================================================================
         return out
 
@@ -118,22 +111,19 @@ class ReLU:
         """
         dz = None
         # =============================== EDIT HERE ===============================
-        dz=np.zeros_like(d_prev)
+        tmp=np.ravel(d_prev)
+        dz=np.zeros_like(tmp)
 
-        if len(d_prev.shape)==1:
-            for i in range(d_prev.shape[0]):
-                if self.zero_mask[i]==1:
-                    dz[i]=0
-                else:
-                    dz[i]=d_prev[i]
+        for i in range(tmp.size):
+            if self.zero_mask[i]==0:
+                dz[i]=tmp[i]
         
-        elif len(d_prev.shape)==2:
-            for i in range(d_prev.shape[0]):
-                for j in range(d_prev.shape[1]):
-                    if self.zero_mask[i][j]==1:
-                        dz[i][j]=0
-                    else:
-                        dz[i][j]=d_prev[i][j]
+        dz=np.reshape(dz,d_prev.shape)
+                        
+        print("Relu d_prev")
+        print(d_prev)
+        print("Relu dz")
+        print(dz)
         # =========================================================================
         return dz
 
@@ -240,16 +230,26 @@ class ConvolutionLayer:
 
         conv = None
         # =============================== EDIT HERE ===============================
+        conv_height=int((height-kernel_size)/stride+1)
+        conv_width=int((width-kernel_size)/stride+1)
+        conv=np.zeros((batch_size, out_channel, conv_height, conv_width))
 
-
-
-
-
-
-
-
-
-
+        for i in range(batch_size):
+            for j in range(out_channel):
+                for k in range(in_channel):
+                    conv[i][j]+=convolution2d(x[i][k],kernel[j][k], stride)
+        
+        if bias is None:
+            pass
+        else:
+            for i in range(batch_size):
+                for j in range(out_channel):
+                    conv[i][j]+=bias[j]
+        
+        print("Convolution x")
+        print(x)
+        print("After convolution")
+        print(conv)
         # =========================================================================
         return conv
 
@@ -287,20 +287,27 @@ class ConvolutionLayer:
         # =============================== EDIT HERE ===============================
 
         # dW
-
-
-
+        for i in range(batch_size):
+            for j in range(out_channel):
+                for k in range(in_channel):
+                    self.dW[j][k]+=convolution2d(self.x[i][k], d_prev[i][j], self.stride)
+        #print("convolution dW")
+        #print(self.dW)
 
         # db
-
-
-
-
+        for i in range(batch_size):
+            for j in range(out_channel):
+                self.db[j]+=np.sum(d_prev[i][j])
+        #print("convolution db")
+        #print(self.db)
         # dx
+        reverse_W=np.flip(self.W, (2, 3))
+        tmp_dprev=self.zero_pad(d_prev, kernel_size-1)
 
-
-
-
+        for i in range(batch_size):
+            for j in range(out_channel):
+                for k in range(in_channel):
+                    dx[i][k]+=convolution2d(tmp_dprev[i][j], reverse_W[j][k], self.stride)
         # =========================================================================
         return dx
 
@@ -325,14 +332,12 @@ class ConvolutionLayer:
         padded_x = None
         batch_size, in_channel, height, width = x.shape
         # =============================== EDIT HERE ===============================
-
-
-
-
-
-
-
-
+        padded_x=np.zeros((batch_size, in_channel, height+2*pad, width+2*pad))
+        for i in range(batch_size):
+            for j in range(in_channel):
+                for k in range(height):
+                    for l in range(width):
+                        padded_x[i][j][k+pad][l+pad]=x[i][j][k][l]
         # =========================================================================
         return padded_x
 
@@ -386,7 +391,7 @@ class MaxPoolingLayer:
 
         [Output]
         pool_out : max_pool result
-        - Shape : (Pool_Height, Pool_Width)
+        - Shape : (Batch size, Out Channel, Pool_Height, Pool_Width)​
         - Pool_Height & Pool_Width can be calculated using 'Height', 'Width', 'Kernel size', 'Stride'
         """
         max_pool = None
@@ -395,19 +400,23 @@ class MaxPoolingLayer:
         # Might be useful when backward
         self.mask = np.zeros_like(x)
         # =============================== EDIT HERE ===============================
+        print("pooling x")
+        print(x)
+        pool_h=int(height/self.kernel_size)
+        pool_w=int(width/self.kernel_size)
+        max_pool=np.zeros((batch_size, channel, pool_h, pool_w))
 
-
-
-
-
-
-
-
-
-
-
-
-
+        for i in range(batch_size):
+            for j in range(channel):
+                for k in range(pool_h):
+                    for l in range(pool_w):
+                        max_index=np.argmax(x[i][j][k*self.kernel_size:(k+1)*self.kernel_size, l*self.kernel_size:(l+1)*self.kernel_size])
+                        tmp_h=k*self.kernel_size+int(max_index/self.kernel_size)
+                        tmp_w=l*self.kernel_size+max_index%self.kernel_size
+                        max_pool[i][j][k][l]=x[i][j][tmp_h][tmp_w]
+                        self.mask[i][j][tmp_h][tmp_w]=1
+        print("After pooling")
+        print(max_pool)
         # =========================================================================
         self.output_shape = max_pool.shape
         return max_pool
@@ -434,15 +443,18 @@ class MaxPoolingLayer:
             d_prev = d_prev.reshape(*self.output_shape)
         batch, channel, height, width = d_prev.shape
         # =============================== EDIT HERE ===============================
+        d_max=np.zeros((batch, channel, height*self.kernel_size, width*self.kernel_size))
+        x_h=d_max.shape[2]
+        x_w=d_max.shape[3]
+        #print("self.mask")
+        #print(self.mask)
 
-
-
-
-
-
-
-
-
+        for i in range(batch):
+            for j in range(channel):
+                for k in range(x_h):
+                    for l in range(x_w):
+                        if self.mask[i][j][k][l]==1:
+                            d_max[i][j][k][l]=d_prev[i][j][int(k/self.kernel_size)][int(l/self.kernel_size)]
         # =========================================================================
         return d_max
 
@@ -496,13 +508,7 @@ class FCLayer:
             x = x.reshape(batch_size, -1)
         self.x = x
         # =============================== EDIT HERE ===============================
-
-
-
-
-
-
-
+        self.out=np.matmul(self.x, self.W)+self.b
         # =========================================================================
         return self.out
 
@@ -522,17 +528,11 @@ class FCLayer:
         self.db = np.zeros_like(self.b, dtype=np.float64)   # Gradient w.r.t. bias (self.b)
         dx = np.zeros_like(self.x, dtype=np.float64)        # Gradient w.r.t. input x
         # =============================== EDIT HERE ===============================
-
-
-
-
-
-
-
-
-
-
-
+        self.dW=np.matmul(np.transpose(self.x), d_prev)
+        self.db=np.ones((self.b.shape[0],1), dtype=np.float32)
+        self.db=np.matmul(np.transpose(self.db), d_prev)
+        self.db=self.db.reshape(-1)
+        dx=np.matmul(d_prev, self.W.T)
         # =========================================================================
         return dx
 
@@ -590,11 +590,8 @@ class SoftmaxLayer:
         """
         y_hat = None
         # =============================== EDIT HERE ===============================
-
-
-
-
-
+        self.y_hat=softmax(x)
+        self.x=x
         # =========================================================================
         return self.y_hat
 
@@ -615,11 +612,8 @@ class SoftmaxLayer:
         batch_size = self.y.shape[0]
         dx = None
         # =============================== EDIT HERE ===============================
-
-
-
-
-
+        dx=-1*self.y*(1-self.y_hat)+(1-self.y)*self.y_hat
+        dx/=batch_size
         # =========================================================================
         return dx
 
@@ -650,16 +644,8 @@ class SoftmaxLayer:
         self.y_hat = y_hat
         self.y = y
         # =============================== EDIT HERE ===============================
-
-
-
-
-
-
-
-
-
-
+        self.loss=-1*self.y*np.log(self.y_hat+eps)
+        self.loss=np.sum(self.loss)/self.y.shape[0]
         # =========================================================================
         return self.loss
 
