@@ -57,8 +57,8 @@ CNN.add_layer('Softmax Layer', SoftmaxLayer())
 CNN.summary()
 
 # Hyper-parameters
-num_epochs = 37
-learning_rate = 0.0007
+num_epochs = 17
+learning_rate = 0.001
 print_every = 1
 
 # =========================================================================

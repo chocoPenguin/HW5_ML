@@ -283,7 +283,7 @@ class ConvolutionLayer:
         # dx
         reverse_W=np.transpose(np.flip(self.W, (2, 3)),(1,0,2,3))
         dx=self.convolution(d_prev, reverse_W, self.b, self.stride, kernel_size-1)
-        dx=dx[:,:,kernel_size-1:height+kernel_size,kernel_size-1:width+kernel_size]
+        dx=dx[:,:,self.pad:height+self.pad,self.pad:width+self.pad]
         # =========================================================================
         return dx
 
